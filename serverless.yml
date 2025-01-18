@@ -1,0 +1,18 @@
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: dad-jokes-api
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+
+plugins:
+  - serverless-offline
+
+functions:
+  hello:
+    handler: dist/serverlessHandler.handler
+    events:
+      - httpApi:
+          path: /hello
+          method: get
