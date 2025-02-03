@@ -2,8 +2,8 @@
 import serverless from "serverless-http"
 import app from "./app"
 
-const handler = serverless(app)
+const api = serverless(app)
 
 export {
-    handler
+    api
 }
