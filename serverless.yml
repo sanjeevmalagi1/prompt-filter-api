@@ -15,9 +15,6 @@ provider:
           Resource: "*"
   environment:
     OPEN_AI_API_KEY: ${env:OPEN_AI_API_KEY}
-    REDIS_HOST: ${env:REDIS_HOST}
-    REDIS_PORT: ${env:REDIS_PORT}
-    REDIS_PASSWORD: ${env:REDIS_PASSWORD}
 
 plugins:
   - serverless-offline

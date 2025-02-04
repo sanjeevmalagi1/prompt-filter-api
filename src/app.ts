@@ -1,14 +1,14 @@
 import express, { Request, Response } from "express"
-import AWS  from "aws-sdk"
+import cors from "cors"
 
 const app = express()
 
 app.use(express.json());
+app.use(cors());
 
 import {
     createNewThread,
-    addUserMessageToThread,
-    addAssistantMessageToThread,
+    addMessageAndRunThread,
     getMessages,
     json_response
 } from "./services";
@@ -25,21 +25,12 @@ app.post('/api/v1/thread', async (req: Request, res: Response) => {
     json_response(req, res, 201, thread)
 })
 
-app.post('/api/v1/thread/:thread_id/message', async (req: Request, res: Response) => {
-    const threadId = req.params.thread_id
-    const message = req.body.message
-    
-    const threadMessages = await addUserMessageToThread(threadId, message)
-
-    await addAssistantMessageToThread(threadId)
-    
-    json_response(req, res, 200, threadMessages)
-})
 
 app.post('/api/v1/thread/:thread_id/run', async (req: Request, res: Response) => {
     const threadId = req.params.thread_id
+    const message = req.body.message
     
-    const threadMessages = await addAssistantMessageToThread(threadId)
+    const threadMessages = await addMessageAndRunThread(threadId, message)
     
     json_response(req, res, 200, threadMessages)
 })

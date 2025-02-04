@@ -1,6 +1,5 @@
 import { OpenAI } from "openai"
 import { Response, Request } from "express"
-import AWS from "aws-sdk"
 
 const open_ai_api_key = process.env.OPEN_AI_API_KEY
 const open_ai_assistant_id = process.env.OPEN_AI_ASSISTANT_ID
@@ -8,8 +7,6 @@ const open_ai_assistant_id = process.env.OPEN_AI_ASSISTANT_ID
 const openai = new OpenAI({
     apiKey: open_ai_api_key
 });
-
-// const lambda = new AWS.Lambda();
 
 export const createNewThread = async () => {
     return await openai.beta.threads.create();
@@ -37,8 +34,29 @@ export const addAssistantMessageToThread = async (threadId: string) => {
     return run
 }
 
+export const addMessageAndRunThread = async (threadId: string, message: string) => {
+    if (!open_ai_assistant_id) {
+        return {}
+    }
+
+    const run = await openai.beta.threads.runs.create(threadId, {
+        assistant_id: open_ai_assistant_id,
+        additional_messages: [
+            {
+                role: "user",
+                content: message,
+            }
+        ]
+    });
+
+    return run
+}
+
 export const getMessages = async (threadId: string) => {
-    const threadMessages = await openai.beta.threads.messages.list(threadId);
+    const threadMessages = await openai.beta.threads.messages.list(threadId, {
+        limit: 5, // Get only the latest 5 messages
+        order: "desc",
+    });
     return threadMessages
 }
 
