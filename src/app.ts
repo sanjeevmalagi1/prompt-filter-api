@@ -19,18 +19,15 @@ app.post('/api/v1/thread', async (req: Request, res: Response) => {
     json_response(req, res, 200, thread)
 })
 
-app.post('/api/v1/thread', async (req: Request, res: Response) => {
-    const thread = await createNewThread()
-
-    json_response(req, res, 201, thread)
-})
-
-
 app.post('/api/v1/thread/:thread_id/run', async (req: Request, res: Response) => {
     const threadId = req.params.thread_id
     const message = req.body.message
+
+    console.log("Running thread", threadId, message)
     
     const threadMessages = await addMessageAndRunThread(threadId, message)
+
+    console.log("Thread messages", threadMessages)
     
     json_response(req, res, 200, threadMessages)
 })

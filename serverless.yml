@@ -15,14 +15,12 @@ provider:
           Resource: "*"
   environment:
     OPEN_AI_API_KEY: ${env:OPEN_AI_API_KEY}
+    OPEN_AI_ASSISTANT_ID: ${env:OPEN_AI_ASSISTANT_ID}
 
 plugins:
   - serverless-offline
 
 functions:
-  jokesUpdater:
-    handler: dist/serverlessHandler.jokesUpdater
-
   application:
     handler: dist/serverlessHandler.api
     events:
