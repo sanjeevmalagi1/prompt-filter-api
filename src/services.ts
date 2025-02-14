@@ -1,82 +1,70 @@
 import { OpenAI } from "openai"
-import { Response, Request } from "express"
+import axios from "axios"
 
 const open_ai_api_key = process.env.OPEN_AI_API_KEY
-const open_ai_assistant_id = process.env.OPEN_AI_ASSISTANT_ID
+
+const TRANSILIENCE_API_BASE_URL = process.env.TRANSILIENCE_API_BASE_URL
+const TRANSILIENCE_BARER_TOKEN = process.env.TRANSILIENCE_BARER_TOKEN
+
+const axiosInstance = axios.create({
+    baseURL: TRANSILIENCE_API_BASE_URL,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${TRANSILIENCE_BARER_TOKEN}`
+    }
+})
+
 
 const openai = new OpenAI({
     apiKey: open_ai_api_key
-});
+})
 
-export const createNewThread = async () => {
-    return await openai.beta.threads.create();
-}
-
-export const addUserMessageToThread = async (threadId: string, message: string) => {
-    const threadMessages = await openai.beta.threads.messages.create(
-        threadId,
-        { role: "user", content: message }
-    );
-
-    return threadMessages
-}
-
-export const addAssistantMessageToThread = async (threadId: string) => {
-    if (!open_ai_assistant_id) {
-        return {}
+const parseResponse = (response: string| null) => {
+    if (!response) {
+      return null
     }
 
-    const run = await openai.beta.threads.runs.create(
-        threadId,
-        { assistant_id: open_ai_assistant_id }
-      );
-
-    return run
+    return JSON.parse(response)
 }
 
-export const addMessageAndRunThread = async (threadId: string, message: string) => {
-    if (!open_ai_assistant_id) {
-        return {}
-    }
-
-    const run = await openai.beta.threads.runs.create(threadId, {
-        assistant_id: open_ai_assistant_id,
-        additional_messages: [
-            {
-                role: "user",
-                content: message,
-            }
-        ]
-    });
-
-    return run
+const getCurrenTime = () => {
+    return new Date().toString()
 }
 
-export const getMessages = async (threadId: string) => {
-    const threadMessages = await openai.beta.threads.messages.list(threadId, {
-        limit: 5, // Get only the latest 5 messages
-        order: "desc",
-    });
-    return threadMessages
+const getSystemPropmt = () => {
+    const currentTime = getCurrenTime()
+    return `You are an API assistant that converts user requests into JSON payloads for an API. Extract relevant parameters such as vendor, product, date range, sorting, and limits from user queries and generate a valid JSON request body.\n\nRules:\n- Use 'since_date' and 'to_date' in the ISO 8601 format: 'YYYY-MM-DDTHH:MM:SSZ'.\n- The 'sort_order' field must always be an object, formatted as '{ \"<sort_field>\": <sort_direction> }', where:\n  - '<sort_field>' must be one of: 'epss_percentile', 'epss_score', 'weaknesses', 'api_created', 'api_last_modified', 'name', 'version'.\n  - '<sort_direction>' should be '1' for ascending or '-1' for descending order.\n  - Default sorting is '{ \"api_last_modified\": -1 }' if not specified by the user.\n- If no 'limit' is specified, default to 10.\n- If no date range is provided, use the last 30 days. The date time is: ${currentTime}.Use this for date range queries. \n.\n- If no vendor is specified, do not include the 'vendor' field.\n- If no product is specified, do not include the 'product' field.\n\n Return only the JSON payload, with no extra text or explanations.Do not include as json tags.`
 }
 
-/**
- * Sends a JSON response to the client with the specified HTTP status code and response data.
- *
- * @param {Request} req - The Express request object, containing information about the HTTP request.
- * @param {Response} res - The Express response object, used to send a response back to the client.
- * @param {number} statusCode - The HTTP status code to be sent with the response.
- * @param {Object | Object[]} response - The data to be sent in the response body. If it's an array, the data will be wrapped under the `items` key; 
- *                                       otherwise, it will be wrapped under the `item` key.
- * @returns {Response} - The Express response object with the JSON payload.
- *
- * Example usage:
- * ```
- * json_response(req, res, 200, { name: "John Doe" });
- * json_response(req, res, 200, [{ name: "John Doe" }, { name: "Jane Doe" }]);
- * ```
- */
-export const json_response = (__req: Request, res: Response, statusCode: number, response: Object | Object[]): Response => {
-    return res.status(statusCode).json(response)
+type SortField = "epss_percentile" | "epss_score" | "weaknesses" | "api_created" | "api_last_modified" | "name" | "version"
+
+interface ICVEPayload {
+    start_from: string
+    limit: number
+    sort_order: Record<SortField, 1 | -1>
+    since_date: string
+    to_date: string
+    vendor?: string
+    product?: string
+}
+ 
+export const makeAPIRequestToOpenAI = async (userPrompt: string) => {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: getSystemPropmt() },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7,
+    })
+  
+    return parseResponse(response.choices[0].message.content) as ICVEPayload
 }
 
+export const makeAPIRequestToFetchCVEs = async (payload: ICVEPayload) => {
+    const body = payload
+    
+    const response = await axiosInstance.post(`/cves`, body)
+
+    return response
+}

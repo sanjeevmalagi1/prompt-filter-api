@@ -1,29 +1,34 @@
 # "service" is the name of this project. This will also be added to your AWS resource names.
-service: anniyan-ai-api
+service: prompt-filter-api
 frameworkVersion: "3"
 
 provider:
   name: aws
   runtime: nodejs20.x
   region: ap-south-1
-  iam:
-    role:
-      statements:
-        - Effect: "Allow"
-          Action:
-            - "lambda:InvokeFunction" # Permission to invoke other Lambdas
-          Resource: "*"
   environment:
     OPEN_AI_API_KEY: ${env:OPEN_AI_API_KEY}
-    OPEN_AI_ASSISTANT_ID: ${env:OPEN_AI_ASSISTANT_ID}
-
-plugins:
-  - serverless-offline
+    TRANSILIENCE_API_BASE_URL: ${env:TRANSILIENCE_API_BASE_URL}
+    TRANSILIENCE_BARER_TOKEN: ${env:TRANSILIENCE_BARER_TOKEN}
 
 functions:
-  application:
-    handler: dist/serverlessHandler.api
+  generatePayload:
+    handler: dist/handler.generatePayload
     events:
-      - http: ANY /
-      - http: 'ANY {proxy+}'
-
+      - http:
+          path: /v1/payload
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+  fetchCVEs:
+    handler: dist/handler.fetchCVEs
+    events:
+      - http:
+          path: /v1/cves
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
