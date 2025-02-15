@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda"
-import { makeAPIRequestToOpenAI, makeAPIRequestToFetchCVEs } from "./services"
+import { makeAPIRequestToOpenAI, makeAPIRequestToFetchCVEs, responseJSON } from "./services"
 
 export const generatePayload = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
@@ -8,19 +8,20 @@ export const generatePayload = async (event: APIGatewayProxyEvent): Promise<APIG
 
         const response = await makeAPIRequestToOpenAI(userPrompt)
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: "Request received",
-                data: response,
-            })
+        const responseBody = {
+            message: "Request received",
+            data: response,
         }
+
+        return responseJSON(200, responseBody)
     } catch (error) {
         console.error("Error", error)
-        return {
-            statusCode: 400,
-            body: JSON.stringify({ message: "Something went wrong" }),
-          }
+
+        const responseBody = {
+            message: "Request received",
+            data: { message: "Something went wrong" },
+        }
+        return responseJSON(400, responseBody)
     }
 }
 
@@ -32,28 +33,23 @@ export const fetchCVEs = async (event: APIGatewayProxyEvent): Promise<APIGateway
         const response = await makeAPIRequestToFetchCVEs(requestBody)
         console.log(response.data)
 
-        return {
-            statusCode: response.status,
-            body: JSON.stringify(response.data)
-        }
+        return responseJSON(response.status, response.data)
     } catch(error: any) {
-        // Handle errors from target API
+        console.log(error)
+        
         if (error.response) {
-            return {
-                statusCode: error.response.status,
-                body: JSON.stringify({
-                    message: "API request failed",
-                    error: error.response.data
-                })
+            const responseBody = {
+                message: "API request failed",
+                error: error.response.data
             }
+
+            return responseJSON(error.response.status, responseBody)
         }
-    
-        return {
-                statusCode: 500,
-                body: JSON.stringify({
-                message: "Internal server error",
-                error: error.message,
-            })
+
+        const responseBody = {
+            message: "Internal server error",
+            error: error.message,
         }
+        return responseJSON(500, responseBody)
     }
 }
